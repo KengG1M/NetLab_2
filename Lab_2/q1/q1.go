@@ -79,10 +79,9 @@ func concurrentCharFrequency(input string, numGoroutines int) map[rune]int {
 
 func main() {
 	// Ví dụ chuỗi
-	input := "Hoàng Ngọc Quỳnh Anh"
-
+	input := "dfqwbnsljknfcwlkhcslkhjgfwkuhgvsdkjlhvewkjlghvxjkhvseluihvjdnveklhvkljnvwuhvcslkncwgbfslichuwkljhkjhgajskhfauaskjldbvaklwehvaslkjdhvauevbsjlvb"
 	// Số lượng goroutine (số luồng logic)
-	numGoroutines := 4
+	numGoroutines := 1
 
 	// Thực thi đếm tần suất ký tự
 	result := concurrentCharFrequency(input, numGoroutines)
