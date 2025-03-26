@@ -19,6 +19,16 @@ func main() {
 
 	key := "123" // giả sử client đã xác thực và có key này
 	requestFileDownload(conn, key)
+
+	// input exit
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Enter exit to quit this fking program")
+
+	text, _ := reader.ReadString('\n')
+
+	// send data to sv
+	conn.Write([]byte(text))
+
 }
 
 func requestFileDownload(conn net.Conn, key string) {

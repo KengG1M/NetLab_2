@@ -24,6 +24,29 @@ func main() {
 			continue
 		}
 		go handleFileDownload(conn, "123") // giả sử key xác thực là "123"
+
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	buffer := make([]byte, 1024)
+
+	n, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Read error: ", err)
+		return
+	}
+
+	message := strings.TrimSpace(string(buffer[:n]))
+	fmt.Println("Received msg: ", message)
+
+	if message == "exit" {
+		fmt.Println("Shutting down sv")
+		conn.Write([]byte("Sv is shutting down"))
+		os.Exit(0)
 	}
 }
 
