@@ -9,17 +9,35 @@ import (
 	"strings"
 )
 
+func main() {
+	conn, err := net.Dial("tcp", "localhost:8080")
+	if err != nil {
+		fmt.Println("Connection error:", err)
+		return
+	}
+	defer conn.Close()
+
+	key := "123" // giả sử client đã xác thực và có key này
+	requestFileDownload(conn, key)
+}
+
 func requestFileDownload(conn net.Conn, key string) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter filename to download: ")
 	filename, _ := reader.ReadString('\n')
 	filename = strings.TrimSpace(filename)
 
-	// Gửi yêu cầu có prefix key
 	request := key + "_" + filename + "\n"
 	conn.Write([]byte(request))
 
-	// Tạo file để lưu dữ liệu nhận được
+	serverReader := bufio.NewReader(conn)
+	status, _ := serverReader.ReadString('\n')
+
+	if strings.TrimSpace(status) != "READY" {
+		fmt.Println("Server response:", status)
+		return
+	}
+
 	outFile, err := os.Create("downloaded_" + filename)
 	if err != nil {
 		fmt.Println("Error creating file:", err)
@@ -27,8 +45,7 @@ func requestFileDownload(conn net.Conn, key string) {
 	}
 	defer outFile.Close()
 
-	// Đọc toàn bộ nội dung gửi về từ server
-	n, err := io.Copy(outFile, conn)
+	n, err := io.Copy(outFile, serverReader)
 	if err != nil {
 		fmt.Println("Download error:", err)
 		return
