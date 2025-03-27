@@ -28,6 +28,7 @@ func main() {
 	conn.Write([]byte(password))
 
 	// Nhận key từ server
+	// Nhận key từ server
 	result, _ := server.ReadString('\n')
 	fmt.Print(result)
 
@@ -35,7 +36,11 @@ func main() {
 		return
 	}
 
-	key := strings.TrimSpace(strings.Split(result, ":")[1])
+	// Cách sửa ổn định hơn
+	words := strings.Fields(result)
+	key := words[len(words)-1] // lấy phần tử cuối là key
+
+	fmt.Println("Extracted key:", key)
 
 	for {
 		fmt.Print("Send message (prefix will be added): ")
