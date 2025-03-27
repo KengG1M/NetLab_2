@@ -5,35 +5,45 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8080")
-	if err != nil {
-		fmt.Println("Error connect: ", err)
-		return
-	}
+	conn, _ := net.Dial("tcp", "localhost:8080")
 	defer conn.Close()
 
-	// input exit
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter message to send (type'exit' if you want to quit this facking program): ")
-	text, _ := reader.ReadString('\n')
+	server := bufio.NewReader(conn)
 
-	// Send data to server
-	conn.Write([]byte(text))
+	// Nhập username
+	msg, _ := server.ReadString(':')
+	fmt.Print(msg)
+	username, _ := reader.ReadString('\n')
+	conn.Write([]byte(username))
 
-	// Send confidential
-	readerAuth1 := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter username: ")
-	text1, _ := readerAuth1.ReadString('\n')
+	// Nhập password
+	msg, _ = server.ReadString(':')
+	fmt.Print(msg)
+	password, _ := reader.ReadString('\n')
+	conn.Write([]byte(password))
 
-	// Send data to server
-	conn.Write([]byte(text1))
+	// Nhận key từ server
+	result, _ := server.ReadString('\n')
+	fmt.Print(result)
 
-	// Receive response from sv
-	buffer := make([]byte, 1024)
+	if !strings.Contains(result, "key") {
+		return
+	}
 
-	n, _ := conn.Read(buffer)
-	fmt.Println("Server reply:", string(buffer[:n]))
+	key := strings.TrimSpace(strings.Split(result, ":")[1])
+
+	for {
+		fmt.Print("Send message (prefix will be added): ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		full := key + "_" + input + "\n"
+		conn.Write([]byte(full))
+		reply, _ := server.ReadString('\n')
+		fmt.Println("Server:", reply)
+	}
 }

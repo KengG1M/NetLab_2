@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 type User struct {
@@ -16,10 +20,13 @@ type User struct {
 	Address  string `json:"address"`
 }
 
+var Users []User
+var keyMap = make(map[string]net.Conn)
+
 func main() {
 	// init array
-	// var Users []User
 
+	loadUsers("users.json")
 	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -39,57 +46,97 @@ func main() {
 	}
 }
 
-func encrypt64(input string) string {
-	// TODO
-	encryptedPw := base64.StdEncoding.EncodeToString([]byte(input))
-	return encryptedPw
-}
+// func encrypt64(input string) string {
+// 	// TODO
+// 	encryptedPw := base64.StdEncoding.EncodeToString([]byte(input))
+// 	return encryptedPw
+// }
 
-func decrypt64(input string) (string, error) {
-	//TODO
+// func decrypt64(input string) (string, error) {
+// 	//TODO
 
-	pw, err := base64.StdEncoding.DecodeString(input)
-	if err != nil {
-		return "", err
+// 	pw, err := base64.StdEncoding.DecodeString(input)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return string(pw), nil
+// }
+
+func checkAuthenticate(username, encrypted string) bool {
+	for _, u := range Users {
+		if u.Username == username && u.Password == encrypted {
+			return true
+		}
 	}
-	return string(pw), nil
+	return false
 }
 
-func checkAuthenticate(username string, password string) {
-
+func loadUsers(file string) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		fmt.Println("No user file found. Starting fresh")
+		return
+	}
+	json.Unmarshal(data, &Users)
 }
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	buffer := make([]byte, 1024)
+	reader := bufio.NewReader(conn)
 
-	// n, err := conn.Read(buffer)
-	// if err != nil {
-	// 	fmt.Println("Read error:", err)
-	// 	return
-	// }
+	conn.Write([]byte("Username: "))
+	username, _ := reader.ReadString('\n')
+	username = strings.TrimSpace(username)
 
-	for {
-		n, err := conn.Read(buffer)
-		if err != nil {
-			fmt.Println("Read error:", err)
-			return
-		}
+	conn.Write([]byte("Password: "))
+	password, _ := reader.ReadString('\n')
+	password = strings.TrimSpace(password)
+	encrypted := base64.StdEncoding.EncodeToString([]byte(password))
 
-		message := strings.TrimSpace(string(buffer[:n]))
-		fmt.Println("Received:", message)
-
-		if message == "exit" {
-			fmt.Println("Shutting down server...")
-			conn.Write([]byte("Server is shutting down..."))
-			os.Exit(0)
-		}
-
-		conn.Write([]byte("Hello from server"))
-
+	// authenticate
+	if !checkAuthenticate(username, encrypted) {
+		conn.Write([]byte("Failed\n"))
+		return
 	}
 
-	// messageAuth1 := strings.TrimSpace(string(buffer[:n]))
-	// fmt.Println("Received out loop:", messageAuth1)
+	rand.Seed(time.Now().UnixNano())
+	key := fmt.Sprintf("%d", rand.Intn(1000)+100)
+	keyMap[key] = conn
+	conn.Write([]byte("Auth success. Your key is " + key + "\n"))
+
+	for {
+		msg, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		msg = strings.TrimSpace(msg)
+		if strings.HasPrefix(msg, key+"_") {
+			fmt.Println("[", key, "]:", msg)
+			conn.Write([]byte("Server received: " + msg + "\n"))
+		} else {
+			conn.Write([]byte("Invalid prefix or key\n"))
+		}
+	}
+	// buffer := make([]byte, 1024)
+
+	// for {
+	// 	n, err := conn.Read(buffer)
+	// 	if err != nil {
+	// 		fmt.Println("Read error:", err)
+	// 		return
+	// 	}
+
+	// 	message := strings.TrimSpace(string(buffer[:n]))
+	// 	fmt.Println("Received:", message)
+
+	// 	if message == "exit" {
+	// 		fmt.Println("Shutting down server...")
+	// 		conn.Write([]byte("Server is shutting down..."))
+	// 		os.Exit(0)
+	// 	}
+
+	// 	conn.Write([]byte("Hello from server"))
+
+	// }
 
 }
