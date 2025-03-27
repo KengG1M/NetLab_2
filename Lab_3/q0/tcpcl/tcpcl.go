@@ -36,7 +36,6 @@ func main() {
 		return
 	}
 
-	// Cách sửa ổn định hơn
 	words := strings.Fields(result)
 	key := words[len(words)-1] // lấy phần tử cuối là key
 
