@@ -117,26 +117,26 @@ func handleConnection(conn net.Conn) {
 			conn.Write([]byte("Invalid prefix or key\n"))
 		}
 	}
-	// buffer := make([]byte, 1024)
+	buffer := make([]byte, 1024)
 
-	// for {
-	// 	n, err := conn.Read(buffer)
-	// 	if err != nil {
-	// 		fmt.Println("Read error:", err)
-	// 		return
-	// 	}
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			fmt.Println("Read error:", err)
+			return
+		}
 
-	// 	message := strings.TrimSpace(string(buffer[:n]))
-	// 	fmt.Println("Received:", message)
+		message := strings.TrimSpace(string(buffer[:n]))
+		fmt.Println("Received:", message)
 
-	// 	if message == "exit" {
-	// 		fmt.Println("Shutting down server...")
-	// 		conn.Write([]byte("Server is shutting down..."))
-	// 		os.Exit(0)
-	// 	}
+		if message == "exit" {
+			fmt.Println("Shutting down server...")
+			conn.Write([]byte("Server is shutting down..."))
+			os.Exit(0)
+		}
 
-	// 	conn.Write([]byte("Hello from server"))
+		conn.Write([]byte("Hello from server"))
 
-	// }
+	}
 
 }
