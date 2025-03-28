@@ -56,4 +56,5 @@ func handleFileRequest(conn net.Conn) {
 	conn.Write([]byte("READY\n"))
 	conn.Write(content)
 	fmt.Println("File sent successfully.")
+	os.Exit(0)
 }
