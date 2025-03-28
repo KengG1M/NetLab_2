@@ -21,9 +21,10 @@ func main() {
 	requestFileDownload(conn, key)
 
 	// input exit
+	// đọc data theo từ terminal/ NewReader(os.Stdin) đọc data từ terminal
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Enter exit to quit this fking program")
-
+	// ReadString ở đây nó sẽ đọc data nhập từ bàn phím cho tới khi enter == \n
 	text, _ := reader.ReadString('\n')
 
 	// send data to sv
@@ -34,7 +35,10 @@ func main() {
 func requestFileDownload(conn net.Conn, key string) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter filename to download: ")
+
+	// Dung readstring data se record luon ca dau xuong dong \n
 	filename, _ := reader.ReadString('\n')
+	// -> nen vi the khi su dung trimspace thi no se xoa nhung dau cach tab hay \n
 	filename = strings.TrimSpace(filename)
 
 	request := key + "_" + filename + "\n"
