@@ -1,8 +1,3 @@
-// =======================================
-// ✅ SERVER - main_server.go
-// ✅ Hoàn thành tất cả yêu cầu trừ Câu 3 (file download)
-// =======================================
-
 package main
 
 import (
