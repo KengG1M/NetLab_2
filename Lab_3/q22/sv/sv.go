@@ -13,7 +13,7 @@ import (
 )
 
 type User struct {
-	Username string `json:"username "`
+	Username string `json:"username"`
 	Password string `json:"password"`
 	Fullname string `json:"fullname"`
 	Emails   string `json:"email"`
@@ -85,6 +85,7 @@ func handleClient(conn net.Conn) {
 	// Check ko đúng sẽ return dừng chương trình
 	if !checkAuthenticate(username, encryptedpw) {
 		conn.Write([]byte("Failed\n"))
+		os.Exit(0)
 		return
 	}
 

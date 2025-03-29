@@ -18,6 +18,31 @@ func main() {
 	defer conn.Close()
 
 	reader := bufio.NewReader(os.Stdin)
+	// server reader to read data from sv to client
+	server := bufio.NewReader(conn)
+
+	msg, _ := server.ReadString(':')
+	fmt.Println(msg)
+	username, _ := reader.ReadString('\n')
+	conn.Write([]byte(username))
+
+	msg, _ = server.ReadString(':')
+	fmt.Print(msg)
+	password, _ := reader.ReadString('\n')
+	conn.Write([]byte(password))
+
+	result, _ := server.ReadString('\n')
+	fmt.Print(result)
+
+	if !strings.Contains(result, "key") {
+		return
+	}
+
+	words := strings.Fields(result)
+	key := words[len(words)-1]
+
+	fmt.Println("Extract key: ", key)
+
 	fmt.Print("Enter filename to download: ")
 	filename, _ := reader.ReadString('\n')
 	filename = strings.TrimSpace(filename)
