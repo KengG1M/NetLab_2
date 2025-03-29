@@ -16,8 +16,10 @@ func main() {
 	server := bufio.NewReader(conn)
 
 	// Nhập username
-	msg, _ := server.ReadString(':')
-	fmt.Print(msg)
+	// reader server ở đây nó sẽ truyền data từ sv ->client cụ thể là những msg như "Username: "
+	// Thì đó là ý khi mà đọc data từ sv về client
+	msg, _ := server.ReadString(':') // đọc data từ sv: "Username: "
+	fmt.Print(msg)                   // In ra Username: lên màn hình để user input
 	username, _ := reader.ReadString('\n')
 	conn.Write([]byte(username))
 
@@ -27,7 +29,6 @@ func main() {
 	password, _ := reader.ReadString('\n')
 	conn.Write([]byte(password))
 
-	// Nhận key từ server
 	// Nhận key từ server
 	result, _ := server.ReadString('\n')
 	fmt.Print(result)

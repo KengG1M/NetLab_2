@@ -1,0 +1,24 @@
+[
+    {
+      "username": "admin",
+      "password": "YWRtaW4=",  
+      "full_name": "Alice Nguyen",
+      "emails": ["alice@gmail.com", "alice@company.com"],
+      "address": ["12 Nguyen Van Cu, Hanoi", "123 Company Road"]
+    },
+    {
+      "username": "bob456",
+      "password": "Ym9iX3Bhc3M=",  
+      "full_name": "Bob Tran",
+      "emails": ["bobtran@yahoo.com"],
+      "address": ["456 Le Loi, HCMC"]
+    },
+    {
+      "username": "charlie789",
+      "password": "Y2hhcmxpZXBhc3N3b3Jk",  
+      "full_name": "Charlie Pham",
+      "emails": ["charlie@protonmail.com", "cpham@company.org"],
+      "address": ["789 Ly Thuong Kiet, Da Nang", "234 Corp Lane"]
+    }
+  ]
+  
