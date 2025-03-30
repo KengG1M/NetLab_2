@@ -2,8 +2,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+
+	// "math/rand"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -41,6 +45,12 @@ func main() {
 }
 
 func loadUsers(filename string) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		fmt.Println("No user file found. starting fresh")
+		return
+	}
+	json.Unmarshal(data, &Users)
 
 }
 
