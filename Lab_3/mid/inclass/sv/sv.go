@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -56,7 +57,7 @@ func loadUsers(filename string) {
 
 func isValid(username string, encrypted string) bool {
 	for _, u := range Users {
-		if username == u.Username && encrypted == u.Password {
+		if u.Username == username && u.Password == encrypted {
 			return true
 		}
 	}
@@ -75,12 +76,20 @@ func handleConnection(conn net.Conn) {
 	conn.Write([]byte("input pass:"))
 	pw, _ := reader.ReadString('\n')
 	pw = strings.TrimSpace(pw)
+	encrypted := base64.StdEncoding.EncodeToString([]byte(pw))
 
-	if !isValid(username, pw) {
+	if !isValid(username, encrypted) {
 		fmt.Println("Failed!")
+		conn.Write([]byte("Failed(sv)."))
 		return
 	}
+	state := "Success(st)!"
+	conn.Write([]byte(state))
 
 	fmt.Println("Success")
+
+}
+
+func live(attempts int) {
 
 }

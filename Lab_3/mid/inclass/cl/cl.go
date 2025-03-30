@@ -25,12 +25,34 @@ func main() {
 	pw, _ := reader.ReadString('\n')
 	conn.Write([]byte(pw))
 
-	for {
-		fmt.Println("send msg: ")
-		input, _ := reader.ReadString('\n')
-		conn.Write([]byte(input))
+	msg, _ = server.ReadString('.')
+	fmt.Println(msg)
 
-		reply, _ := server.ReadString('\n')
-		fmt.Println("sv: ", reply)
+	// tạo var state để nhận data từ sv sau khi check valid
+	// 0 fail  1 success
+	state, _ := server.ReadString('!')
+	fmt.Println("state: ", state, "cham het")
+
+	// for {
+	// 	// fmt.Println("send msg: ")
+	// 	// input, _ := reader.ReadString('\n')
+	// 	// conn.Write([]byte(input))
+
+	// 	// reply, _ := server.ReadString('\n')
+	// 	// fmt.Println("sv: ", reply)
+	// 	if state == "Success(st)." {
+	// 		fmt.Println("send msg: ")
+	// 		input, _ := reader.ReadString('\n')
+	// 		conn.Write([]byte(input))
+
+	// 		reply, _ := server.ReadString('\n')
+	// 		fmt.Println("sv: ", reply)
+	// 	} else {
+	// 		os.Exit(0)
+	// 	}
+	// }
+
+	if state == "Success(st)." {
+		fmt.Println("abc")
 	}
 }
