@@ -2,14 +2,9 @@ package main
 
 import (
 	"bufio"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net"
-	"os"
 	"strings"
-	"time"
 )
 
 type User struct {
@@ -22,10 +17,10 @@ type User struct {
 
 var User []User
 
-func main(){
+func main() {
 	loadUsers("users.json")
 
-	ln, err := net.Listen("tcp",":8080")
+	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		fmt.Println("Error", err)
 		return
@@ -44,12 +39,34 @@ func main(){
 	}
 }
 
-func loadUsers(filename string){
+func loadUsers(filename string) {
 
 }
 
-func checkAuthenticate
+func isValid(username string, encrypted string) bool {
+	for _, u := range Users {
 
-func handleConnection(conn net.Conn){
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	conn.Write([]byte("input username"))
+	username, _ := reader.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	conn.Write([]byte("input pass"))
+	pw, _ := reader.ReadString('\n')
+	pw = strings.TrimSpace(pw)
+
+	if !isValid(username, pw) {
+		fmt.Println("Failed!")
+		return
+	}
+
+	fmt.Println("Success")
 
 }
