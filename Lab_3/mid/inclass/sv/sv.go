@@ -68,11 +68,11 @@ func handleConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 
-	conn.Write([]byte("input username"))
+	conn.Write([]byte("input username:"))
 	username, _ := reader.ReadString('\n')
 	username = strings.TrimSpace(username)
 
-	conn.Write([]byte("input pass"))
+	conn.Write([]byte("input pass:"))
 	pw, _ := reader.ReadString('\n')
 	pw = strings.TrimSpace(pw)
 
