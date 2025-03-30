@@ -15,7 +15,8 @@ type User struct {
 	Address  string `json:"address"`
 }
 
-var User []User
+// var <Ten mang> []<type>
+var Users []User
 
 func main() {
 	loadUsers("users.json")
@@ -45,8 +46,11 @@ func loadUsers(filename string) {
 
 func isValid(username string, encrypted string) bool {
 	for _, u := range Users {
-
+		if username == u.Username && encrypted == u.Password {
+			return true
+		}
 	}
+	return false
 }
 
 func handleConnection(conn net.Conn) {
