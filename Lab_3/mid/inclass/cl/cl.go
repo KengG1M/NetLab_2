@@ -5,54 +5,82 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
-	conn, _ := net.Dial("tcp", "localhost:8080")
-
+	conn, err := net.Dial("tcp", "localhost:8080")
+	if err != nil {
+		fmt.Println("Error connecting to server:", err)
+		return
+	}
 	defer conn.Close()
 
-	reader := bufio.NewReader(os.Stdin)
-	server := bufio.NewReader(conn)
+	inputReader := bufio.NewReader(os.Stdin)
+	serverReader := bufio.NewReader(conn)
 
-	msg, _ := server.ReadString(':')
-	fmt.Println(msg)
-	username, _ := reader.ReadString('\n')
-	conn.Write([]byte(username))
+	for {
+		// Đọc một dòng từ server (đến ký tự '\n')
+		line, err := serverReader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Server closed connection or error occurred:", err)
+			return
+		}
+		line = strings.TrimSpace(line)
 
-	msg, _ = server.ReadString(':')
-	fmt.Println(msg)
-	pw, _ := reader.ReadString('\n')
-	conn.Write([]byte(pw))
+		// Dựa vào nội dung dòng nhận được để xử lý
+		switch line {
+		case "input username:":
+			fmt.Print(line + " ")
+			userInput, _ := inputReader.ReadString('\n')
+			conn.Write([]byte(userInput)) // gửi đến server
+			continue
 
-	msg, _ = server.ReadString('.')
-	fmt.Println(msg)
+		case "input pass:":
+			fmt.Print(line + " ")
+			passInput, _ := inputReader.ReadString('\n')
+			conn.Write([]byte(passInput))
+			continue
 
-	// tạo var state để nhận data từ sv sau khi check valid
-	// 0 fail  1 success
-	state, _ := server.ReadString('!')
-	fmt.Println("state: ", state, "cham het")
+		case "Success(st).":
+			// Đăng nhập thành công
+			fmt.Println("Login success! ✅")
+			break // thoát vòng for => sang phần xử lý tiếp
 
-	// for {
-	// 	// fmt.Println("send msg: ")
-	// 	// input, _ := reader.ReadString('\n')
-	// 	// conn.Write([]byte(input))
+		case "Login failed.":
+			// Sai 3 lần => kết thúc
+			fmt.Println("❌ Too many failed attempts. Exiting...")
+			return
 
-	// 	// reply, _ := server.ReadString('\n')
-	// 	// fmt.Println("sv: ", reply)
-	// 	if state == "Success(st)." {
-	// 		fmt.Println("send msg: ")
-	// 		input, _ := reader.ReadString('\n')
-	// 		conn.Write([]byte(input))
+		default:
+			// Có thể là "Wrong credentials. 2 attempt(s) left."
+			fmt.Println(line)
+			// Chỉ in ra và loop tiếp => cho nhập lại
+			continue
+		}
 
-	// 		reply, _ := server.ReadString('\n')
-	// 		fmt.Println("sv: ", reply)
-	// 	} else {
-	// 		os.Exit(0)
-	// 	}
-	// }
+		// Nếu rơi vào case "Success(st).", ta break vòng for
+		break
+	}
 
-	if state == "Success(st)." {
-		fmt.Println("abc")
+	// Tới đây => đăng nhập thành công => có thể chat hoặc làm gì đó
+	for {
+		fmt.Print("Enter msg to send (or 'exit'): ")
+		userMsg, _ := inputReader.ReadString('\n')
+		userMsg = strings.TrimSpace(userMsg)
+		if userMsg == "exit" {
+			fmt.Println("Bye!")
+			return
+		}
+
+		conn.Write([]byte(userMsg + "\n"))
+
+		// đọc reply
+		reply, err := serverReader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Server closed connection or error occurred:", err)
+			return
+		}
+		fmt.Println("Server reply:", strings.TrimSpace(reply))
 	}
 }

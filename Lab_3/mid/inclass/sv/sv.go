@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-
-	// "math/rand"
 	"net"
 	"os"
 	"strings"
@@ -20,7 +18,6 @@ type User struct {
 	Address  string `json:"address"`
 }
 
-// var <Ten mang> []<type>
 var Users []User
 
 func main() {
@@ -28,34 +25,33 @@ func main() {
 
 	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		fmt.Println("Error", err)
+		fmt.Println("Error:", err)
 		return
 	}
 	defer ln.Close()
+
 	fmt.Println("Server is listening on port 8080...")
 
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			fmt.Println("Accept err:", err)
+			fmt.Println("Accept error:", err)
 			continue
 		}
-
 		go handleConnection(conn)
 	}
 }
 
-func loadUsers(filename string) {
-	data, err := os.ReadFile(filename)
+func loadUsers(file string) {
+	data, err := os.ReadFile(file)
 	if err != nil {
-		fmt.Println("No user file found. starting fresh")
+		fmt.Println("No user file found. Starting fresh")
 		return
 	}
 	json.Unmarshal(data, &Users)
-
 }
 
-func isValid(username string, encrypted string) bool {
+func isValid(username, encrypted string) bool {
 	for _, u := range Users {
 		if u.Username == username && u.Password == encrypted {
 			return true
@@ -66,30 +62,50 @@ func isValid(username string, encrypted string) bool {
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-
 	reader := bufio.NewReader(conn)
 
-	conn.Write([]byte("input username:"))
-	username, _ := reader.ReadString('\n')
-	username = strings.TrimSpace(username)
+	const maxAttempts = 3
 
-	conn.Write([]byte("input pass:"))
-	pw, _ := reader.ReadString('\n')
-	pw = strings.TrimSpace(pw)
-	encrypted := base64.StdEncoding.EncodeToString([]byte(pw))
+	for i := 1; i <= maxAttempts; i++ {
+		// Hỏi username
+		conn.Write([]byte("input username:\n")) // Gửi prompt có "\n"
+		username, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading username:", err)
+			return
+		}
+		username = strings.TrimSpace(username)
 
-	if !isValid(username, encrypted) {
-		fmt.Println("Failed!")
-		conn.Write([]byte("Failed(sv)."))
-		return
+		// Hỏi password
+		conn.Write([]byte("input pass:\n"))
+		pw, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading password:", err)
+			return
+		}
+		pw = strings.TrimSpace(pw)
+
+		// Mã hoá password
+		encrypted := base64.StdEncoding.EncodeToString([]byte(pw))
+
+		// Kiểm tra đăng nhập
+		if isValid(username, encrypted) {
+			conn.Write([]byte("Success(st).\n"))
+			fmt.Println("Login success:", username)
+			return
+		} else {
+			attemptsLeft := maxAttempts - i
+			if attemptsLeft > 0 {
+				// Sai nhưng còn lượt
+				conn.Write([]byte(
+					fmt.Sprintf("Wrong credentials. %d attempt(s) left.\n", attemptsLeft),
+				))
+			} else {
+				// Sai đủ 3 lần
+				conn.Write([]byte("Login failed.\n"))
+				fmt.Println("Too many failed attempts. Connection closed.")
+				return
+			}
+		}
 	}
-	state := "Success(st)!"
-	conn.Write([]byte(state))
-
-	fmt.Println("Success")
-
-}
-
-func live(attempts int) {
-
 }
