@@ -19,6 +19,22 @@ func main() {
 	}
 }
 
+// func handleClient(conn *net.UDPConn) {
+// 	var buf [512]byte
+// 	_, addr, err := conn.ReadFromUDP(buf[0:])
+// 	if err != nil {
+// 		return
+// 	}
+
+// 	daytime := time.Now().String()
+// 	conn.WriteToUDP([]byte(daytime), addr)
+// }
+
+func checkError(err error) {
+	fmt.Fprintf(os.Stderr, "Fatal err: ", err.Error())
+	os.Exit(1)
+}
+
 func handleClient(conn *net.UDPConn) {
 	var buf [512]byte
 	_, addr, err := conn.ReadFromUDP(buf[0:])
@@ -28,9 +44,4 @@ func handleClient(conn *net.UDPConn) {
 
 	daytime := time.Now().String()
 	conn.WriteToUDP([]byte(daytime), addr)
-}
-
-func checkError(err error) {
-	fmt.Fprintf(os.Stderr, "Fatal err: ", err.Error())
-	os.Exit(1)
 }
