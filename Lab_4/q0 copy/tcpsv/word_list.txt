@@ -1,0 +1,3 @@
+apple;A common fruit
+python;A popular programming language
+vietnam;A country in Southeast Asia
