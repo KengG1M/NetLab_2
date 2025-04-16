@@ -1,0 +1,6 @@
+[
+    {"text": "hangman", "hint": "Popular word game"},
+    {"text": "golang", "hint": "Programming language"},
+    {"text": "computer", "hint": "Electronic device"},
+    {"text": "network", "hint": "Connected computers"}
+]
