@@ -45,20 +45,28 @@ func main() {
 	key := response[keyStart : keyStart+keyEnd]
 
 	// Game interaction loop
+	// Modified message reading loop
 	for {
 		msg, err := server.ReadString('\n')
 		if err != nil {
-			fmt.Println("Disconnected from server:", err)
+			fmt.Println("Disconnected:", err)
 			return
 		}
 
-		fmt.Print(msg)
+		// Print server messages except the prompt
+		if !strings.HasPrefix(msg, "Guess a letter: ") {
+			fmt.Print(msg)
+		}
 
-		if strings.Contains(msg, "Guess a letter:") {
+		if strings.Contains(msg, ">>> YOUR TURN!") {
 			fmt.Print("Your guess: ")
 			input, _ := reader.ReadString('\n')
 			input = strings.TrimSpace(input)
-			conn.Write([]byte(fmt.Sprintf("%s_%s\n", key, input)))
+			if len(input) > 0 {
+				// Send only the first character in uppercase
+				guess := strings.ToUpper(string(input[0]))
+				fmt.Fprintf(conn, "%s_%s\n", key, guess)
+			}
 		}
 	}
 }

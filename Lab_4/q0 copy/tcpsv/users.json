@@ -7,6 +7,13 @@
       "address": ["12 Nguyen Van Cu, Hanoi", "123 Company Road"]
     },
     {
+      "username": "admin1",
+      "password": "YWRtaW4=",  
+      "full_name": "Alice Nguyen",
+      "emails": ["alice@gmail.com", "alice@company.com"],
+      "address": ["12 Nguyen Van Cu, Hanoi", "123 Company Road"]
+    },
+    {
       "username": "bob456",
       "password": "Ym9iX3Bhc3M=",  
       "full_name": "Bob Tran",

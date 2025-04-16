@@ -125,24 +125,27 @@ func handleConnection(conn net.Conn) {
 
 	conn.Write([]byte(fmt.Sprintf("Authentication successful. Your key is %s\n", key)))
 
-	// Add player to game
+	// Modified handleConnection segment
 	gameLock.Lock()
 	if game == nil {
 		initGame()
 	}
 	game.Players = append(game.Players, conn)
 	game.Scores[username] = 0
+	playerCount := len(game.Players)
+	shouldStart := playerCount >= 2 && !game.GameStarted
 	gameLock.Unlock()
 
-	conn.Write([]byte(fmt.Sprintf("Welcome to Hangman! Waiting for players...\n")))
-
-	// Start game if we have at least 2 players
-	gameLock.Lock()
-	if len(game.Players) >= 2 && !game.GameStarted {
+	if shouldStart {
+		gameLock.Lock()
 		game.GameStarted = true
+		game.CurrentPlayer = 0 // Explicitly set first player
+		gameLock.Unlock()
+
+		// Force newline-terminated broadcast
 		broadcastGameState()
+		time.Sleep(100 * time.Millisecond) // Allow broadcast to complete
 	}
-	gameLock.Unlock()
 
 	// Handle client messages
 	for {
@@ -153,11 +156,19 @@ func handleConnection(conn net.Conn) {
 		}
 		msg = strings.TrimSpace(msg)
 
-		if strings.HasPrefix(msg, key+"_") {
-			handleGameMessage(username, msg[len(key)+1:])
-		} else {
-			conn.Write([]byte("Invalid message format. Use key_message\n"))
+		parts := strings.SplitN(msg, "_", 2)
+		if len(parts) != 2 {
+			conn.Write([]byte("Invalid message format. Use key_guess\n"))
+			continue
 		}
+
+		msgKey, guess := parts[0], parts[1]
+		if msgKey != key {
+			conn.Write([]byte("Invalid key\n"))
+			continue
+		}
+
+		handleGameMessage(username, guess)
 	}
 }
 
@@ -187,7 +198,10 @@ func broadcastGameState() {
 	gameLock.Lock()
 	defer gameLock.Unlock()
 
-	game.LastActivity = time.Now()
+	// Clear previous output
+	for _, conn := range game.Players {
+		conn.Write([]byte("\033[2J\033[H")) // Clear terminal
+	}
 
 	displayWord := ""
 	for i, c := range game.Word {
@@ -198,43 +212,72 @@ func broadcastGameState() {
 		}
 	}
 
-	scores := ""
+	// Build scores string
+	scores := new(strings.Builder)
 	for username, score := range game.Scores {
-		scores += fmt.Sprintf("%s: %d points\n", username, score)
+		fmt.Fprintf(scores, "%s: %d points\n", username, score)
 	}
 
+	// Get current player username
+	currentPlayerKey := ""
+	for key, conn := range connMap {
+		if conn == game.Players[game.CurrentPlayer] {
+			currentPlayerKey = key
+			break
+		}
+	}
+	currentPlayerUsername := keyMap[currentPlayerKey]
+
+	// Send game state to all players
 	for i, conn := range game.Players {
-		conn.Write([]byte(fmt.Sprintf("\nHint: %s\n", game.Hint)))
-		conn.Write([]byte(fmt.Sprintf("Word: %s\n", displayWord)))
-		conn.Write([]byte(fmt.Sprintf("Scores:\n%s", scores)))
+		conn.Write([]byte(fmt.Sprintf(
+			"=== HANGMAN ===\n"+
+				"Hint: %s\n"+
+				"Word: %s\n"+
+				"Scores:\n%s\n",
+			game.Hint, displayWord, scores.String())))
+
 		if i == game.CurrentPlayer {
-			conn.Write([]byte("It's your turn! Guess a letter: "))
+			conn.Write([]byte(fmt.Sprintf(
+				">>> YOUR TURN! (30 seconds)\n" +
+					"Guess a letter: ")))
 		} else {
-			conn.Write([]byte(fmt.Sprintf("Waiting for %s to guess...\n", keyMap[getKeyFromConn(conn)])))
+			conn.Write([]byte(fmt.Sprintf(
+				"Waiting for %s to guess...\n",
+				currentPlayerUsername)))
 		}
 	}
 }
 
-func handleGameMessage(username, msg string) {
+func handleGameMessage(username, guess string) {
 	gameLock.Lock()
 	defer gameLock.Unlock()
 
-	currentUsername := keyMap[getKeyFromConn(game.Players[game.CurrentPlayer])]
-	if username != currentUsername {
+	// Verify it's this player's turn
+	currentPlayerKey := ""
+	for key, conn := range connMap {
+		if conn == game.Players[game.CurrentPlayer] {
+			currentPlayerKey = key
+			break
+		}
+	}
+
+	if keyMap[currentPlayerKey] != username {
 		connMap[username].Write([]byte("It's not your turn!\n"))
 		return
 	}
 
-	msg = strings.ToUpper(strings.TrimSpace(msg))
-	if len(msg) != 1 || msg[0] < 'A' || msg[0] > 'Z' {
-		connMap[username].Write([]byte("Please enter a single letter A-Z\n"))
+	// Process guess
+	guess = strings.ToUpper(strings.TrimSpace(guess))
+	if len(guess) != 1 || guess[0] < 'A' || guess[0] > 'Z' {
+		connMap[username].Write([]byte("Invalid guess! Enter a single letter A-Z\n"))
 		return
 	}
 
 	found := false
 	count := 0
 	for i, c := range game.Word {
-		if string(c) == msg && !game.Revealed[i] {
+		if string(c) == guess && !game.Revealed[i] {
 			game.Revealed[i] = true
 			found = true
 			count++
@@ -243,9 +286,9 @@ func handleGameMessage(username, msg string) {
 
 	if found {
 		game.Scores[username] += 10 * count
-		connMap[username].Write([]byte(fmt.Sprintf("Correct! +%d points\n", 10*count)))
+		broadcastMessage(fmt.Sprintf("%s guessed '%s' correctly! +%d points\n", username, guess, 10*count))
 	} else {
-		connMap[username].Write([]byte("Incorrect guess!\n"))
+		broadcastMessage(fmt.Sprintf("%s guessed '%s' incorrectly\n", username, guess))
 		game.CurrentPlayer = (game.CurrentPlayer + 1) % len(game.Players)
 	}
 
@@ -261,12 +304,15 @@ func handleGameMessage(username, msg string) {
 	if gameOver {
 		broadcastGameOver()
 		initGame()
-		if len(game.Players) >= 2 {
-			game.GameStarted = true
-		}
+	} else {
+		broadcastGameState()
 	}
+}
 
-	broadcastGameState()
+func broadcastMessage(msg string) {
+	for _, conn := range game.Players {
+		conn.Write([]byte(msg))
+	}
 }
 
 func broadcastGameOver() {
@@ -279,11 +325,27 @@ func broadcastGameOver() {
 		}
 	}
 
-	for _, conn := range game.Players {
-		conn.Write([]byte(fmt.Sprintf("\nGame over! The word was: %s\n", game.Word)))
-		conn.Write([]byte(fmt.Sprintf("Winner: %s with %d points\n", winner, maxScore)))
-	}
+	broadcastMessage(fmt.Sprintf(
+		"\nGAME OVER! The word was: %s\n"+
+			"Winner: %s with %d points\n\n",
+		game.Word, winner, maxScore))
 }
+
+// func broadcastGameOver() {
+// 	winner := ""
+// 	maxScore := -1
+// 	for username, score := range game.Scores {
+// 		if score > maxScore {
+// 			maxScore = score
+// 			winner = username
+// 		}
+// 	}
+
+// 	for _, conn := range game.Players {
+// 		conn.Write([]byte(fmt.Sprintf("\nGame over! The word was: %s\n", game.Word)))
+// 		conn.Write([]byte(fmt.Sprintf("Winner: %s with %d points\n", winner, maxScore)))
+// 	}
+// }
 
 func removePlayer(username string) {
 	gameLock.Lock()
@@ -306,6 +368,9 @@ func removePlayer(username string) {
 }
 
 func getKeyFromConn(conn net.Conn) string {
+	gameLock.Lock()
+	defer gameLock.Unlock()
+
 	for key, c := range connMap {
 		if c == conn {
 			return key
