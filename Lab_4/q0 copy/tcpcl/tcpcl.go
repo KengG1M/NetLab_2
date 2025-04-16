@@ -20,37 +20,45 @@ func main() {
 	server := bufio.NewReader(conn)
 
 	// Login
-	msg, _ := server.ReadString(':')
-	fmt.Print(msg)
+	fmt.Print("Username: ")
 	username, _ := reader.ReadString('\n')
 	conn.Write([]byte(username))
 
-	msg, _ = server.ReadString(':')
-	fmt.Print(msg)
+	fmt.Print("Password: ")
 	password, _ := reader.ReadString('\n')
 	conn.Write([]byte(password))
 
-	result, _ := server.ReadString('\n')
-	fmt.Print(result)
+	// Read server response
+	response, _ := server.ReadString('\n')
+	fmt.Print(response)
 
-	if !strings.Contains(result, "key") {
+	if !strings.Contains(response, "key") {
 		return
 	}
+
+	// Extract key from response
+	keyStart := strings.Index(response, "key is ") + 7
+	keyEnd := strings.Index(response[keyStart:], "\n")
+	if keyEnd == -1 {
+		keyEnd = len(response) - keyStart
+	}
+	key := response[keyStart : keyStart+keyEnd]
 
 	// Game interaction loop
 	for {
 		msg, err := server.ReadString('\n')
 		if err != nil {
-			fmt.Println("Disconnected from server.")
+			fmt.Println("Disconnected from server:", err)
 			return
 		}
 
 		fmt.Print(msg)
 
-		if strings.Contains(msg, "Your turn") {
-			fmt.Print("Enter guess: ")
+		if strings.Contains(msg, "Guess a letter:") {
+			fmt.Print("Your guess: ")
 			input, _ := reader.ReadString('\n')
-			conn.Write([]byte(input))
+			input = strings.TrimSpace(input)
+			conn.Write([]byte(fmt.Sprintf("%s_%s\n", key, input)))
 		}
 	}
 }
