@@ -1,16 +1,16 @@
 [
     {
-      "username": "alice",
+      "username": "huy",
       "password": "MTIzNA==",   
-      "fullname": "Alice Nguyen",
-      "email": "alice@example.com",
+      "fullname": "Tran Phuong Quang Huy",
+      "email": "huy@gmail.com",
       "address": "Hanoi"
     },
     {
-      "username": "bob",
+      "username": "Duy",
       "password": "MTIzNA==",
-      "fullname": "Bob Tran",
-      "email": "bob@example.com",
+      "fullname": "Do Duy Anh",
+      "email": "anh@gmail.com",
       "address": "HCM"
     }
   ]
