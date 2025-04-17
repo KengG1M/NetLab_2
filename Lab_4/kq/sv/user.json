@@ -1,0 +1,30 @@
+[
+    {
+        "username":"quynh",
+        "password":"1234",
+        "fullname":"Vo Tran Khanh Quynh",
+        "emails":["vtkq@gmail.com","quynh@gmail.com"],
+        "addresses":["HCMC","Long An"]
+    },
+    {
+        "username":"harry",
+        "password":"5678",
+        "fullname":"Harry Potter",
+        "emails":["harrypotter@gmail.com","harry@gmail.com"],
+        "addresses":["London","Amsterdam"]
+    },
+    {
+        "username":"ron",
+        "password":"2468",
+        "fullname":"Ron Weasley",
+        "emails":["ronweasley@gmail.com","ron@gmail.com"],
+        "addresses":["The Burrow","London"]
+    },
+    {
+        "username":"hermione",
+        "password":"3579",
+        "fullname":"Hermione Granger",
+        "emails":["hermionegranger@gmail.com","hermione@gmail.com"],
+        "addresses":["Boston","Joricho"]
+    }
+]
