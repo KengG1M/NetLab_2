@@ -1,0 +1,17 @@
+[
+    {
+      "username": "alice",
+      "password": "MTIzNA==",   
+      "fullname": "Alice Nguyen",
+      "email": "alice@example.com",
+      "address": "Hanoi"
+    },
+    {
+      "username": "bob",
+      "password": "MTIzNA==",
+      "fullname": "Bob Tran",
+      "email": "bob@example.com",
+      "address": "HCM"
+    }
+  ]
+  

@@ -2,13 +2,24 @@ package main
 
 import (
 	"bufio"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
 )
+
+type User struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Fullname string `json:"fullname"`
+	Email    string `json:"email"`
+	Address  string `json:"address"`
+}
 
 type Player struct {
 	conn   net.Conn
@@ -23,16 +34,19 @@ type Word struct {
 }
 
 var (
-	words = []Word{
+	users       []User
+	playerQueue []*Player
+	queueLock   sync.Mutex
+	words       = []Word{
 		{"A yellow fruit", "banana"},
 		{"A programming language", "golang"},
 		{"A network protocol", "socket"},
 	}
-	playerQueue []*Player
-	queueLock   sync.Mutex
 )
 
 func main() {
+	loadUsers("users.json")
+
 	listener, err := net.Listen("tcp", ":12345")
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -51,21 +65,41 @@ func main() {
 	}
 }
 
+func loadUsers(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Println("No users file found:", err)
+		os.Exit(1)
+	}
+	json.Unmarshal(data, &users)
+}
+
+func authenticate(username, encodedPassword string) bool {
+	for _, u := range users {
+		if u.Username == username && u.Password == encodedPassword {
+			return true
+		}
+	}
+	return false
+}
+
 func handleLogin(conn net.Conn) {
 	scan := bufio.NewScanner(conn)
 	fmt.Fprintln(conn, "Username:")
 	scan.Scan()
-	username := scan.Text()
+	username := strings.TrimSpace(scan.Text())
 
 	fmt.Fprintln(conn, "Password:")
 	scan.Scan()
-	password := scan.Text()
+	password := strings.TrimSpace(scan.Text())
 
-	if password != "1234" {
+	encodedPw := base64.StdEncoding.EncodeToString([]byte(password))
+	if !authenticate(username, encodedPw) {
 		fmt.Fprintln(conn, "Authentication failed.")
 		conn.Close()
 		return
 	}
+
 	fmt.Fprintf(conn, "Authenticated! Welcome %s\n", username)
 
 	player := &Player{
