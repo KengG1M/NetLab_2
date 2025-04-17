@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -18,15 +19,32 @@ func main() {
 	serverScanner := bufio.NewScanner(conn)
 	inputScanner := bufio.NewScanner(os.Stdin)
 
+	var key string
+	authDone := false
+
+	// Listen to server messages
 	go func() {
 		for serverScanner.Scan() {
 			text := serverScanner.Text()
 			fmt.Println(text)
+
+			if strings.HasPrefix(text, "Authenticated! Your key is: ") {
+				parts := strings.Split(text, ": ")
+				if len(parts) == 2 {
+					key = strings.TrimSpace(parts[1])
+					authDone = true
+				}
+			}
 		}
 	}()
 
 	for inputScanner.Scan() {
 		text := inputScanner.Text()
-		fmt.Fprintln(conn, text)
+		if authDone && key != "" {
+			fmt.Fprintf(conn, "%s_%s\n", key, text)
+		} else {
+
+			fmt.Fprintln(conn, text)
+		}
 	}
 }

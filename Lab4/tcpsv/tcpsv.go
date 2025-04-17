@@ -15,16 +15,14 @@ import (
 
 type User struct {
 	Username string `json:"username"`
-	Password string `json:"password"`
-	Fullname string `json:"fullname"`
-	Email    string `json:"email"`
-	Address  string `json:"address"`
+	Password string `json:"password"` // base64 encoded
 }
 
 type Player struct {
 	conn   net.Conn
 	name   string
 	points int
+	key    string
 	scan   *bufio.Scanner
 }
 
@@ -34,8 +32,10 @@ type Word struct {
 }
 
 var (
+	usersFile   = "users.json"
 	users       []User
 	playerQueue []*Player
+	keyConnMap  = make(map[string]net.Conn)
 	queueLock   sync.Mutex
 	words       = []Word{
 		{"A yellow fruit", "banana"},
@@ -45,7 +45,7 @@ var (
 )
 
 func main() {
-	loadUsers("users.json")
+	loadUsers()
 
 	listener, err := net.Listen("tcp", ":12345")
 	if err != nil {
@@ -53,7 +53,6 @@ func main() {
 		return
 	}
 	defer listener.Close()
-
 	fmt.Println("Server is running at port 12345")
 
 	for {
@@ -65,46 +64,58 @@ func main() {
 	}
 }
 
-func loadUsers(path string) {
-	data, err := os.ReadFile(path)
+func loadUsers() {
+	data, err := os.ReadFile(usersFile)
 	if err != nil {
-		fmt.Println("No users file found:", err)
-		os.Exit(1)
+		fmt.Println("No users file found.")
+		return
 	}
 	json.Unmarshal(data, &users)
 }
 
-func authenticate(username, encodedPassword string) bool {
+func authenticate(username, password string) bool {
+	encoded := base64.StdEncoding.EncodeToString([]byte(password))
 	for _, u := range users {
-		if u.Username == username && u.Password == encodedPassword {
+		if u.Username == username && u.Password == encoded {
 			return true
 		}
 	}
 	return false
 }
 
+func generateKey() string {
+	for {
+		key := fmt.Sprintf("%d", rand.Intn(900)+100)
+		if _, exists := keyConnMap[key]; !exists {
+			return key
+		}
+	}
+}
+
 func handleLogin(conn net.Conn) {
 	scan := bufio.NewScanner(conn)
 	fmt.Fprintln(conn, "Username:")
 	scan.Scan()
-	username := strings.TrimSpace(scan.Text())
+	username := scan.Text()
 
 	fmt.Fprintln(conn, "Password:")
 	scan.Scan()
-	password := strings.TrimSpace(scan.Text())
+	password := scan.Text()
 
-	encodedPw := base64.StdEncoding.EncodeToString([]byte(password))
-	if !authenticate(username, encodedPw) {
+	if !authenticate(username, password) {
 		fmt.Fprintln(conn, "Authentication failed.")
 		conn.Close()
 		return
 	}
 
-	fmt.Fprintf(conn, "Authenticated! Welcome %s\n", username)
+	key := generateKey()
+	keyConnMap[key] = conn
+	fmt.Fprintf(conn, "Authenticated! Your key is: %s\n", key)
 
 	player := &Player{
 		conn: conn,
 		name: username,
+		key:  key,
 		scan: scan,
 	}
 
@@ -117,6 +128,16 @@ func handleLogin(conn net.Conn) {
 		go startGame(p1, p2)
 	}
 	queueLock.Unlock()
+
+	for scan.Scan() {
+		msg := scan.Text()
+		if strings.HasPrefix(msg, key+"_") {
+			fmt.Println("["+key+"]:", msg)
+			fmt.Fprintf(conn, "Received: %s\n", msg)
+		} else {
+			fmt.Fprintf(conn, "Invalid key prefix\n")
+		}
+	}
 }
 
 func startGame(p1, p2 *Player) {
@@ -129,7 +150,7 @@ func startGame(p1, p2 *Player) {
 
 	broadcast := func(msg string) {
 		for _, p := range players {
-			fmt.Fprintln(p.conn, msg)
+			fmt.Fprintf(p.conn, "%s_%s\n", p.key, msg)
 		}
 	}
 
@@ -138,10 +159,9 @@ func startGame(p1, p2 *Player) {
 	broadcast("Word: " + string(hidden))
 
 	turn := 0
-
 	for strings.Contains(string(hidden), "_") {
 		current := players[turn%2]
-		fmt.Fprintf(current.conn, "Your turn! Guess a letter (30s):\n")
+		fmt.Fprintf(current.conn, "%s_Your turn! Guess a letter (30s):\n", current.key)
 
 		timer := time.After(30 * time.Second)
 		guessCh := make(chan string)
@@ -154,9 +174,9 @@ func startGame(p1, p2 *Player) {
 
 		select {
 		case guess := <-guessCh:
-			guess = strings.ToLower(guess)
+			guess = strings.ToLower(strings.TrimSpace(guess))
 			if len(guess) != 1 {
-				fmt.Fprintln(current.conn, "Invalid input. Your turn is over.")
+				fmt.Fprintf(current.conn, "%s_Invalid input. Your turn is over.\n", current.key)
 				turn++
 				continue
 			}
@@ -173,11 +193,11 @@ func startGame(p1, p2 *Player) {
 				current.points += count * 10
 				broadcast(fmt.Sprintf("%s guessed '%s' correctly! Word: %s | %s: %d pts", current.name, guess, string(hidden), current.name, current.points))
 			} else {
-				fmt.Fprintf(current.conn, "Wrong guess. Your turn is over.\n")
+				fmt.Fprintf(current.conn, "%s_Wrong guess. Your turn is over.\n", current.key)
 				turn++
 			}
 		case <-timer:
-			fmt.Fprintf(current.conn, "Time out! Your turn is over.\n")
+			fmt.Fprintf(current.conn, "%s_Time out! Your turn is over.\n", current.key)
 			turn++
 		}
 	}
@@ -188,6 +208,7 @@ func startGame(p1, p2 *Player) {
 	}
 	broadcast(fmt.Sprintf("Game Over! Final word: %s", word.Word))
 	broadcast(fmt.Sprintf("Winner is %s with %d points!", winner.name, winner.points))
+
 	for _, p := range players {
 		p.conn.Close()
 	}
