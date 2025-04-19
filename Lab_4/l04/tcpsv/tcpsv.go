@@ -87,6 +87,7 @@ func authenticate(username, encodedPassword string) bool {
 
 func handleLogin(conn net.Conn) {
 	scan := bufio.NewScanner(conn)
+
 	fmt.Fprintln(conn, "Username:")
 	scan.Scan()
 	username := strings.TrimSpace(scan.Text())
@@ -96,12 +97,14 @@ func handleLogin(conn net.Conn) {
 	password := strings.TrimSpace(scan.Text())
 
 	encodedPw := base64.StdEncoding.EncodeToString([]byte(password))
+
 	if !authenticate(username, encodedPw) {
 		fmt.Fprintln(conn, "Authentication failed.")
 		conn.Close()
 		return
 	}
 
+	// generate key for each client
 	rand.Seed(time.Now().UnixNano())
 	key := fmt.Sprintf("%d", rand.Intn(1000)+100)
 	keyMap[key] = conn
@@ -119,15 +122,19 @@ func handleLogin(conn net.Conn) {
 	if len(playerQueue) >= 2 {
 		p1 := playerQueue[0]
 		p2 := playerQueue[1]
-		playerQueue = playerQueue[2:]
-		go startGame(p1, p2)
+		playerQueue = playerQueue[2:] // bỏ 2 player đầu ở hàng đợi
+		go startGame(p1, p2)          // bắt đầu game ở goroutine riêng
 	}
 	queueLock.Unlock()
 }
 
 func startGame(p1, p2 *Player) {
 	players := []*Player{p1, p2}
+
+	// random word from words
 	word := words[rand.Intn(len(words))]
+
+	// slice contain underscore char to hide guessing keyword
 	hidden := make([]rune, len(word.Word))
 	for i := range hidden {
 		hidden[i] = '_'
